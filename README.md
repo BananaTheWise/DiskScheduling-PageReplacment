@@ -48,9 +48,19 @@ brew install openjdk@11
 ## Running the Project
 
 1. Compile the project:
+
+### On Linux / macOS
 ```bash
-cd /path/to/OSProject
-javac -d bin algorithms/PageReplacement/src/os/project/*.java algorithms/DiskScheduling/src/disk/scheduling/*.java gui/*.java
+cd OSProject
+mkdir -p bin
+javac -d bin algorithms/PageReplacement/*.java algorithms/DiskScheduling/*.java gui/*.java
+```
+
+### On Windows (CMD / PowerShell)
+```cmd
+cd OSProject
+mkdir bin
+javac -d bin algorithms\PageReplacement\*.java algorithms\DiskScheduling\*.java gui\*.java
 ```
 
 2. Run the GUI:

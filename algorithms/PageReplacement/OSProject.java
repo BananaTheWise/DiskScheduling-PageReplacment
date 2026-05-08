@@ -2,7 +2,7 @@ package algorithms.PageReplacement;
 
 import java.util.Scanner;
 
- class OSProject {
+public class OSProject {
 
     public static void main(String[] args) {
         System.out.println("Enter page reference string");
