@@ -1,11 +1,12 @@
 # Disk Scheduling and Page Replacement Project
 
-This project implements disk scheduling algorithms (FCFS, SSTF, SCAN, LOOK) and page replacement algorithms (FIFO, LRU, Optimal, Second Chance) with a graphical user interface.
+This project implements disk scheduling algorithms (FCFS, SSTF, SCAN, LOOK, CSCAN, CLOOK) and page replacement algorithms (FIFO, LRU, Optimal, Second Chance) with a graphical user interface. It also includes comparative graphs and performance metric tables for detailed analysis.
 
 ## Requirements
 
 - Java JDK 11 or higher
 - Swing (included with JDK)
+- (See `requirements.txt` for additional details)
 
 ## Installation
 

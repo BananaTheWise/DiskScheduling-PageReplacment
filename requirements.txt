@@ -1,1 +1,4 @@
-Java JDK >= 11
+# Project Requirements
+
+Java JDK 11 or higher
+Java Swing API (Included built-in with the standard Java SE JDK)
