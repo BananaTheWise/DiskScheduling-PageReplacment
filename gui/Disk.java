@@ -13,31 +13,23 @@ public class Disk {
         this.bgColor = color;
         JFrame frame = new JFrame("Disk Scheduling");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(600, 500);
+        frame.setSize(800, 600);
         frame.getContentPane().setBackground(bgColor);
 
         JPanel panel = new JPanel();
-        panel.setLayout(new GridLayout(7, 2));
+        panel.setLayout(new GridLayout(5, 2));
         panel.setBackground(bgColor);
 
-        JLabel algoLabel = new JLabel("Select Algorithm:");
-        JComboBox<String> algoBox = new JComboBox<>(new String[]{"FCFS", "SSTF", "SCAN", "LOOK"});
-        
         JLabel cylLabel = new JLabel("Cylinders visited (comma/space separated):");
-        JTextField cylField = new JTextField();
+        JTextField cylField = new JTextField("98, 183, 37, 122, 14, 124, 65, 67");
         JLabel dirLabel = new JLabel("Direction:");
         JComboBox<String> dirBox = new JComboBox<>(new String[]{"large", "small"});
         JLabel startLabel = new JLabel("Starting head:");
-        JTextField startField = new JTextField();
+        JTextField startField = new JTextField("53");
         JLabel sizeLabel = new JLabel("Number of cylinders:");
-        JTextField sizeField = new JTextField();
+        JTextField sizeField = new JTextField("200");
         JButton runButton = new JButton("Run");
-        JTextArea outputArea = new JTextArea(10, 50);
-        outputArea.setEditable(false);
-        JScrollPane scrollPane = new JScrollPane(outputArea);
 
-        panel.add(algoLabel);
-        panel.add(algoBox);
         panel.add(cylLabel);
         panel.add(cylField);
         panel.add(dirLabel);
@@ -50,10 +42,11 @@ public class Disk {
         panel.add(runButton);
 
         frame.add(panel, BorderLayout.NORTH);
-        frame.add(scrollPane, BorderLayout.CENTER);
+
+        JTabbedPane tabbedPane = new JTabbedPane();
+        frame.add(tabbedPane, BorderLayout.CENTER);
 
         runButton.addActionListener(e -> {
-            String selectedAlgo = (String) algoBox.getSelectedItem();
             String cylStr = cylField.getText();
             String dir = (String) dirBox.getSelectedItem();
             String startStr = startField.getText();
@@ -67,36 +60,126 @@ public class Disk {
                 int start = Integer.parseInt(startStr);
                 int size = Integer.parseInt(sizeStr);
 
-                // Capture output
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                PrintStream ps = new PrintStream(baos);
-                PrintStream old = System.out;
-                System.setOut(ps);
+                tabbedPane.removeAll();
 
-                // Run only selected algorithm
-                if ("FCFS".equals(selectedAlgo)) {
-                    invokeCalculateSeek("disk.scheduling.FCFS", cylinders, start);
-                } else if ("SSTF".equals(selectedAlgo)) {
-                    invokeCalculateSeekWithDir("disk.scheduling.SSTF", cylinders, start, dir);
-                } else if ("SCAN".equals(selectedAlgo)) {
-                    invokeCalculateSeekWithSize("disk.scheduling.SCAN", cylinders, start, dir, size);
-                } else if ("LOOK".equals(selectedAlgo)) {
-                    invokeCalculateSeekWithDir("disk.scheduling.Look", cylinders, start, dir);
+                String[] algorithms = {"FCFS", "SSTF", "SCAN", "CSCAN", "LOOK", "CLOOK"};
+                java.util.List<String> algoNames = new java.util.ArrayList<>();
+                java.util.List<Integer> totalSeeks = new java.util.ArrayList<>();
+
+                for (String selectedAlgo : algorithms) {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    PrintStream ps = new PrintStream(baos);
+                    PrintStream old = System.out;
+                    System.setOut(ps);
+
+                    // Clone array to prevent sorting in one algorithm from affecting the next
+                    int[] currentCylinders = cylinders.clone();
+
+                    try {
+                        if ("FCFS".equals(selectedAlgo)) {
+                            invokeCalculateSeek("algorithms.DiskScheduling.FCFS", currentCylinders, start);
+                        } else if ("SSTF".equals(selectedAlgo)) {
+                            invokeCalculateSeekWithDir("algorithms.DiskScheduling.SSTF", currentCylinders, start, dir);
+                        } else if ("SCAN".equals(selectedAlgo)) {
+                            invokeCalculateSeekWithSize("algorithms.DiskScheduling.SCAN", currentCylinders, start, dir, size);
+                        } else if ("LOOK".equals(selectedAlgo)) {
+                            invokeCalculateSeekWithDir("algorithms.DiskScheduling.Look", currentCylinders, start, dir);
+                        } else if ("CSCAN".equals(selectedAlgo)) {
+                            invokeCalculateSeekWithSize("algorithms.DiskScheduling.CSCAN", currentCylinders, start, dir, size);
+                        } else if ("CLOOK".equals(selectedAlgo)) {
+                            invokeCalculateSeekWithDir("algorithms.DiskScheduling.CLOOK", currentCylinders, start, dir);
+                        }
+                    } catch (Exception ex) {
+                        System.out.println("Error: " + ex.getMessage());
+                        ex.printStackTrace();
+                    }
+
+                    System.out.flush();
+                    System.setOut(old);
+
+                    String output = baos.toString();
+                    java.util.List<Integer> sequence = extractSequence(output, start);
+
+                    int totalSeek = 0;
+                    for (String line : output.split("\n")) {
+                        if (line.contains("Total Seek Distance:")) {
+                            try {
+                                totalSeek = Integer.parseInt(line.split(":")[1].trim());
+                            } catch (Exception ex) {}
+                        }
+                    }
+                    algoNames.add(selectedAlgo);
+                    totalSeeks.add(totalSeek);
+
+                    JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+                    
+                    JTextArea outputArea = new JTextArea(output);
+                    outputArea.setEditable(false);
+                    JScrollPane scrollText = new JScrollPane(outputArea);
+                    
+                    JPanel graphPanel = new JPanel() {
+                        @Override
+                        protected void paintComponent(Graphics g) {
+                            super.paintComponent(g);
+                            if (!sequence.isEmpty()) {
+                                drawDiskSchedulingGraph(g, sequence.stream().mapToInt(Integer::intValue).toArray(), getWidth(), getHeight(), selectedAlgo);
+                            }
+                        }
+                    };
+                    graphPanel.setBackground(bgColor);
+                    
+                    splitPane.setTopComponent(scrollText);
+                    splitPane.setBottomComponent(graphPanel);
+                    splitPane.setDividerLocation(150);
+                    
+                    tabbedPane.addTab(selectedAlgo, splitPane);
                 }
 
-                System.out.flush();
-                System.setOut(old);
-
-                String output = baos.toString();
-                outputArea.setText(output);
-                
-                // Extract movement sequence from output and display graph
-                java.util.List<Integer> sequence = extractSequence(output, start);
-                if (!sequence.isEmpty()) {
-                    displayGraph(sequence.stream().mapToInt(Integer::intValue).toArray(), selectedAlgo);
+                // Add Performance Metrics Tab
+                StringBuilder summaryText = new StringBuilder();
+                summaryText.append(String.format("%-12s | %-20s | %-20s\n", "Algorithm", "Total Head Movement", "Avg Seek Distance"));
+                summaryText.append("-----------------------------------------------------------------\n");
+                for (int i = 0; i < algoNames.size(); i++) {
+                    double avg = (double) totalSeeks.get(i) / cylinders.length;
+                    summaryText.append(String.format("%-12s | %-20d | %-20.2f\n", algoNames.get(i), totalSeeks.get(i), avg));
                 }
+
+                JTextArea summaryArea = new JTextArea(summaryText.toString());
+                summaryArea.setEditable(false);
+                summaryArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+                JScrollPane summaryScroll = new JScrollPane(summaryArea);
+
+                JPanel chartPanel = new JPanel() {
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        super.paintComponent(g);
+                        if (totalSeeks.isEmpty()) return;
+                        int maxSeek = java.util.Collections.max(totalSeeks);
+                        if (maxSeek == 0) maxSeek = 1; // prevent divide-by-zero
+                        int barWidth = getWidth() / (totalSeeks.size() * 2 + 1);
+                        for (int i = 0; i < totalSeeks.size(); i++) {
+                            int barHeight = (int) (((double) totalSeeks.get(i) / maxSeek) * (getHeight() - 80));
+                            int x = barWidth + i * 2 * barWidth;
+                            int y = getHeight() - 50 - barHeight;
+                            g.setColor(new Color(100, 150, 200));
+                            g.fillRect(x, y, barWidth, barHeight);
+                            g.setColor(Color.BLACK);
+                            g.drawRect(x, y, barWidth, barHeight);
+                            g.drawString(algoNames.get(i), x, getHeight() - 30);
+                            g.drawString(String.valueOf(totalSeeks.get(i)), x, y - 5);
+                        }
+                    }
+                };
+                chartPanel.setBackground(bgColor);
+
+                JSplitPane summarySplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+                summarySplit.setTopComponent(summaryScroll);
+                summarySplit.setBottomComponent(chartPanel);
+                summarySplit.setDividerLocation(150);
+
+                tabbedPane.addTab("Performance Metrics", summarySplit);
             } catch (Exception ex) {
-                outputArea.setText("Error: " + ex.getMessage());
+                JOptionPane.showMessageDialog(frame, "Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 ex.printStackTrace();
             }
         });
@@ -120,24 +203,6 @@ public class Disk {
         Class<?> clazz = Class.forName(className);
         Method method = clazz.getMethod("calculateSeek", int[].class, int.class, String.class, int.class);
         method.invoke(null, cylinders, start, dir, size);
-    }
-
-    private void displayGraph(int[] sequence, String algorithmName) {
-        JFrame graphFrame = new JFrame(algorithmName + " - Disk Scheduling Graph");
-        graphFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        graphFrame.setSize(900, 600);
-
-        JPanel graphPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                drawDiskSchedulingGraph(g, sequence, getWidth(), getHeight(), algorithmName);
-            }
-        };
-        graphPanel.setBackground(bgColor);
-
-        graphFrame.add(graphPanel);
-        graphFrame.setVisible(true);
     }
 
     private void drawDiskSchedulingGraph(Graphics g, int[] sequence, int width, int height, String algorithmName) {
